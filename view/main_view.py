@@ -7,10 +7,18 @@ class MainView(ctk.CTkFrame):
     def __init__(self, master):
         super().__init__(master)
         self.pack(fill="both", expand=True)
+
+        # Callbacks
         self._callback_añadir = None
         self._callback_salir = None
         self._callback_guardar = None
         self._callback_cargar = None
+        self._callback_buscar = None
+        self._callback_editar = None
+
+        self.usuarios = []
+        self.usuario_seleccionado = None
+
         self.crear_menu(master)
         self.crear_widgets()
 
@@ -26,50 +34,64 @@ class MainView(ctk.CTkFrame):
         menu_archivo.add_command(label="Salir", command=self._on_salir_click)
 
     def crear_widgets(self):
-        # Layout principal
-        self.grid_columnconfigure(0, weight=1)
-        self.grid_columnconfigure(1, weight=2)
-        self.grid_rowconfigure(0, weight=1)
-        self.grid_rowconfigure(1, weight=0)
+        # --- Filtros y búsqueda ---
+        frame_filtros = ctk.CTkFrame(self)
+        frame_filtros.pack(fill="x", padx=10, pady=5)
 
-        # --- Botonera superior ---
-        frame_botones = ctk.CTkFrame(self)
-        frame_botones.grid(row=0, column=0, columnspan=2, sticky="ew", padx=10, pady=(10, 0))
-        frame_botones.grid_columnconfigure((0, 1), weight=1)
+        self.entry_buscar = ctk.CTkEntry(frame_filtros, placeholder_text="Buscar por nombre...")
+        self.entry_buscar.pack(side="left", fill="x", expand=True, padx=5)
 
-        self.btn_añadir = ctk.CTkButton(frame_botones, text="Añadir Usuario", command=self._on_añadir_click)
-        self.btn_añadir.grid(row=0, column=0, padx=5, pady=5)
+        self.combo_genero = ctk.CTkOptionMenu(frame_filtros, values=["Todos", "Masculino", "Femenino", "Otro"])
+        self.combo_genero.pack(side="left", padx=5)
 
-        self.btn_salir = ctk.CTkButton(frame_botones, text="Salir", command=self._on_salir_click)
-        self.btn_salir.grid(row=0, column=1, padx=5, pady=5)
+        self.btn_buscar = ctk.CTkButton(frame_filtros, text="Buscar", width=100, command=self._on_buscar_click)
+        self.btn_buscar.pack(side="left", padx=5)
 
-        # --- Zona lista ---
-        frame_lista = ctk.CTkScrollableFrame(self)
-        frame_lista.grid(row=1, column=0, sticky="nsew", padx=10, pady=10)
-        self.lista_usuarios = frame_lista
-        self.labels_usuarios = []
+        self.btn_añadir = ctk.CTkButton(frame_filtros, text="Añadir usuario", command=self._on_añadir_click)
+        self.btn_añadir.pack(side="left", padx=5)
 
-        # --- Zona de previsualización ---
-        frame_preview = ctk.CTkFrame(self)
-        frame_preview.grid(row=1, column=1, sticky="nsew", padx=10, pady=10)
+        # --- Contenedor principal ---
+        contenedor = ctk.CTkFrame(self)
+        contenedor.pack(fill="both", expand=True, padx=10, pady=10)
 
-        self.lbl_avatar = ctk.CTkLabel(frame_preview, text="[Sin imagen]", width=150, height=150)
+        # --- Lista de usuarios ---
+        self.lista = tk.Listbox(contenedor, height=15, activestyle="none")
+        self.lista.pack(side="left", fill="both", expand=True, padx=(0, 10))
+        self.lista.bind("<ButtonRelease-1>", self._on_seleccionar_usuario)
+        self.lista.bind("<Double-1>", self._on_doble_click)
+
+        # --- Panel lateral de detalles ---
+        self.panel_detalles = ctk.CTkFrame(contenedor, width=250)
+        self.panel_detalles.pack(side="right", fill="y")
+
+        ctk.CTkLabel(self.panel_detalles, text="Detalles del usuario", font=("Arial", 16, "bold")).pack(pady=(10, 5))
+
+        self.lbl_avatar = ctk.CTkLabel(self.panel_detalles, text="(sin avatar)")
         self.lbl_avatar.pack(pady=10)
 
-        self.lbl_detalles = ctk.CTkLabel(frame_preview, text="Selecciona un usuario", anchor="w", justify="left")
-        self.lbl_detalles.pack(padx=10, pady=10, fill="x")
+        self.lbl_nombre = ctk.CTkLabel(self.panel_detalles, text="Nombre: -")
+        self.lbl_nombre.pack(pady=5)
+
+        self.lbl_edad = ctk.CTkLabel(self.panel_detalles, text="Edad: -")
+        self.lbl_edad.pack(pady=5)
+
+        self.lbl_genero = ctk.CTkLabel(self.panel_detalles, text="Género: -")
+        self.lbl_genero.pack(pady=5)
 
         # --- Barra de estado ---
-        self.lbl_estado = ctk.CTkLabel(self, text="Listo", anchor="w")
-        self.lbl_estado.grid(row=2, column=0, columnspan=2, sticky="ew", padx=10, pady=5)
+        self.label_estado = ctk.CTkLabel(self, text="Listo", anchor="w")
+        self.label_estado.pack(fill="x", padx=10, pady=5)
 
     # ---- Callbacks configurables ----
-    def configurar_callbacks(self, on_añadir, on_salir, on_guardar, on_cargar):
+    def configurar_callbacks(self, on_añadir, on_salir, on_guardar, on_cargar, on_buscar, on_editar):
         self._callback_añadir = on_añadir
         self._callback_salir = on_salir
         self._callback_guardar = on_guardar
         self._callback_cargar = on_cargar
+        self._callback_buscar = on_buscar
+        self._callback_editar = on_editar
 
+    # ---- Eventos internos ----
     def _on_añadir_click(self):
         if self._callback_añadir:
             self._callback_añadir()
@@ -86,94 +108,51 @@ class MainView(ctk.CTkFrame):
         if self._callback_cargar:
             self._callback_cargar()
 
+    def _on_buscar_click(self):
+        if self._callback_buscar:
+            texto = self.entry_buscar.get()
+            genero = self.combo_genero.get()
+            self._callback_buscar(texto, genero)
+
+    def _on_doble_click(self, event):
+        if self._callback_editar:
+            try:
+                index = self.lista.curselection()[0]
+                self._callback_editar(index)
+            except Exception:
+                pass
+
+    def _on_seleccionar_usuario(self, event):
+        try:
+            index = self.lista.curselection()[0]
+            usuario = self.usuarios[index]
+            self.mostrar_detalles(usuario)
+        except Exception:
+            pass
+
     # ---- Métodos de vista ----
     def set_lista(self, usuarios):
-        for lbl in self.labels_usuarios:
-            lbl.destroy()
-        self.labels_usuarios.clear()
+        self.usuarios = usuarios
+        self.lista.delete(0, "end")
+        for i, u in enumerate(usuarios):
+            self.lista.insert("end", f"{u.nombre} ({u.edad} años, {u.genero})")
+        self.set_estado(f"{len(usuarios)} usuarios cargados.")
 
-        for i, usuario in enumerate(usuarios):
-            lbl = ctk.CTkLabel(self.lista_usuarios, text=str(usuario), anchor="w")
-            lbl.pack(fill="x", padx=5, pady=2)
-            self.labels_usuarios.append(lbl)
+    def mostrar_detalles(self, usuario):
+        self.usuario_seleccionado = usuario
+        self.lbl_nombre.configure(text=f"Nombre: {usuario.nombre}")
+        self.lbl_edad.configure(text=f"Edad: {usuario.edad}")
+        self.lbl_genero.configure(text=f"Género: {usuario.genero}")
 
-    def mostrar_usuario(self, usuario):
-        self.lbl_detalles.configure(text=f"Nombre: {usuario.nombre}\nEdad: {usuario.edad}\nGénero: {usuario.genero}")
         if usuario.avatar:
             try:
                 img = ctk.CTkImage(light_image=Image.open(usuario.avatar), size=(96, 96))
                 self.lbl_avatar.configure(image=img, text="")
-                self.lbl_avatar.image = img  # mantener referencia
+                self.lbl_avatar.image = img
             except Exception:
                 self.lbl_avatar.configure(text="[Error cargando avatar]", image=None)
         else:
-            self.lbl_avatar.configure(text="[Sin imagen]", image=None)
+            self.lbl_avatar.configure(text="(sin avatar)", image=None)
 
     def set_estado(self, texto):
-        self.lbl_estado.configure(text=texto)
-
-
-# ---- Ventana modal de alta ----
-class AltaUsuarioModal(ctk.CTkToplevel):
-    def __init__(self, master, callback_confirmar, lista_avatars):
-        super().__init__(master)
-        self.title("Nuevo Usuario")
-        self.geometry("400x400")
-        self.resizable(False, False)
-        self.grab_set()  # modal
-        self.callback_confirmar = callback_confirmar
-        self.lista_avatars = lista_avatars
-        self.avatar_seleccionado = lista_avatars[0]
-        self.crear_widgets()
-
-    def crear_widgets(self):
-        ctk.CTkLabel(self, text="Nombre:").pack(pady=5)
-        self.entry_nombre = ctk.CTkEntry(self, width=250)
-        self.entry_nombre.pack(pady=5)
-
-        ctk.CTkLabel(self, text="Edad (0-100):").pack(pady=5)
-        self.entry_edad = ctk.CTkEntry(self, width=100)
-        self.entry_edad.pack(pady=5)
-
-        ctk.CTkLabel(self, text="Género:").pack(pady=5)
-        self.var_genero = ctk.StringVar(value="Masculino")
-        frame_genero = ctk.CTkFrame(self)
-        frame_genero.pack(pady=5)
-        for g in ["Masculino", "Femenino", "Otro"]:
-            ctk.CTkRadioButton(frame_genero, text=g, variable=self.var_genero, value=g).pack(side="left", padx=5)
-
-        ctk.CTkLabel(self, text="Selecciona avatar:").pack(pady=5)
-        frame_avatars = ctk.CTkFrame(self)
-        frame_avatars.pack(pady=5)
-        self.botones_avatar = []
-        from PIL import Image
-        for ruta in self.lista_avatars:
-            img = ctk.CTkImage(light_image=Image.open(ruta), size=(64, 64))
-            btn = ctk.CTkButton(frame_avatars, image=img, text="", width=70, height=70,
-                                 command=lambda r=ruta: self.seleccionar_avatar(r))
-            btn.pack(side="left", padx=5)
-            btn.image = img
-            self.botones_avatar.append(btn)
-
-        ctk.CTkButton(self, text="Confirmar", command=self.confirmar).pack(pady=15)
-
-    def seleccionar_avatar(self, ruta):
-        self.avatar_seleccionado = ruta
-        for b in self.botones_avatar:
-            b.configure(fg_color="transparent")
-        # marcar visualmente el elegido
-        self.focus()
-
-    def confirmar(self):
-        nombre = self.entry_nombre.get().strip()
-        edad_texto = self.entry_edad.get().strip()
-        genero = self.var_genero.get()
-        avatar = self.avatar_seleccionado
-
-        try:
-            edad = int(edad_texto)
-        except ValueError:
-            edad = -1
-
-        self.callback_confirmar(nombre, edad, genero, avatar)
-        self.destroy()
+        self.label_estado.configure(text=texto)

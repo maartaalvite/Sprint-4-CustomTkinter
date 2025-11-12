@@ -63,10 +63,22 @@ class GestorUsuarios:
                         avatar = fila.get("avatar", None)
                         self._usuarios.append(Usuario(nombre, edad, genero, avatar))
                     except Exception:
-                        # Si una fila está corrupta, la saltamos
-                        continue
+                        continue  # Ignora filas corruptas
         except FileNotFoundError:
-            # No existe aún: no pasa nada
-            pass
+            pass  # No existe el CSV aún
         except Exception as e:
             raise IOError(f"Error al cargar CSV: {e}")
+
+    # ---- Búsqueda y filtrado ----
+    def filtrar(self, texto_busqueda: str = "", genero: str = "Todos"):
+        resultado = []
+        texto_busqueda = texto_busqueda.lower().strip()
+
+        for u in self._usuarios:
+            coincide_nombre = texto_busqueda in u.nombre.lower()
+            coincide_genero = (genero == "Todos") or (u.genero.lower() == genero.lower())
+
+            if coincide_nombre and coincide_genero:
+                resultado.append(u)
+
+        return resultado
