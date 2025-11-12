@@ -1,5 +1,6 @@
 import customtkinter as ctk
 from PIL import Image
+import tkinter as tk
 
 
 class MainView(ctk.CTkFrame):
@@ -8,7 +9,21 @@ class MainView(ctk.CTkFrame):
         self.pack(fill="both", expand=True)
         self._callback_añadir = None
         self._callback_salir = None
+        self._callback_guardar = None
+        self._callback_cargar = None
+        self.crear_menu(master)
         self.crear_widgets()
+
+    def crear_menu(self, master):
+        menubar = tk.Menu(master)
+        master.config(menu=menubar)
+
+        menu_archivo = tk.Menu(menubar, tearoff=0)
+        menubar.add_cascade(label="Archivo", menu=menu_archivo)
+        menu_archivo.add_command(label="Guardar", command=self._on_guardar_click)
+        menu_archivo.add_command(label="Cargar", command=self._on_cargar_click)
+        menu_archivo.add_separator()
+        menu_archivo.add_command(label="Salir", command=self._on_salir_click)
 
     def crear_widgets(self):
         # Layout principal
@@ -49,9 +64,11 @@ class MainView(ctk.CTkFrame):
         self.lbl_estado.grid(row=2, column=0, columnspan=2, sticky="ew", padx=10, pady=5)
 
     # ---- Callbacks configurables ----
-    def configurar_callbacks(self, on_añadir, on_salir):
+    def configurar_callbacks(self, on_añadir, on_salir, on_guardar, on_cargar):
         self._callback_añadir = on_añadir
         self._callback_salir = on_salir
+        self._callback_guardar = on_guardar
+        self._callback_cargar = on_cargar
 
     def _on_añadir_click(self):
         if self._callback_añadir:
@@ -60,6 +77,14 @@ class MainView(ctk.CTkFrame):
     def _on_salir_click(self):
         if self._callback_salir:
             self._callback_salir()
+
+    def _on_guardar_click(self):
+        if self._callback_guardar:
+            self._callback_guardar()
+
+    def _on_cargar_click(self):
+        if self._callback_cargar:
+            self._callback_cargar()
 
     # ---- Métodos de vista ----
     def set_lista(self, usuarios):

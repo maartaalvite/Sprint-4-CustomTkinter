@@ -7,18 +7,18 @@ class AppController:
         self.modelo = GestorUsuarios()
         self.vista = MainView(root)
 
-        # lista de imágenes disponibles
         self.avatars = ["assets/avatar1.png", "assets/avatar2.png", "assets/avatar3.png"]
 
         # Configurar callbacks
-        self.vista.configurar_callbacks(self.alta_usuario_modal, self.salir)
+        self.vista.configurar_callbacks(
+            self.alta_usuario_modal,
+            self.salir,
+            self.guardar,
+            self.cargar
+        )
 
-        # Datos iniciales opcionales
-        self.modelo.añadir(Usuario("Ana", 25, "Femenino", self.avatars[0]))
-        self.modelo.añadir(Usuario("Luis", 32, "Masculino", self.avatars[1]))
-        self.refrescar_lista()
-
-        self.vista.set_estado("Aplicación iniciada")
+        # Intentar cargar usuarios previos
+        self.cargar(inicial=True)
 
     def refrescar_lista(self):
         usuarios = self.modelo.listar()
@@ -26,7 +26,7 @@ class AppController:
         if usuarios:
             self.vista.mostrar_usuario(usuarios[-1])
 
-    # --- Alta de usuario ---
+    # --- Alta ---
     def alta_usuario_modal(self):
         AltaUsuarioModal(self.root, self.confirmar_alta, self.avatars)
 
@@ -39,6 +39,24 @@ class AppController:
         except Exception as e:
             self.vista.set_estado(f"Error: {e}")
 
+    # --- CSV ---
+    def guardar(self):
+        try:
+            self.modelo.guardar_csv()
+            self.vista.set_estado("Usuarios guardados correctamente.")
+        except Exception as e:
+            self.vista.set_estado(f"Error al guardar: {e}")
+
+    def cargar(self, inicial=False):
+        try:
+            self.modelo.cargar_csv()
+            self.refrescar_lista()
+            if not inicial:
+                self.vista.set_estado("Usuarios cargados correctamente.")
+        except Exception as e:
+            self.vista.set_estado(f"Error al cargar: {e}")
+
     # --- Salir ---
     def salir(self):
+        self.guardar()
         self.root.quit()
