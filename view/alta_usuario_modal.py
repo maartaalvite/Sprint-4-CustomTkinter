@@ -4,21 +4,25 @@ from tkinter import messagebox
 
 
 class AltaUsuarioModal(ctk.CTkToplevel):
-    def __init__(self, master, callback_guardar, avatars):
+    def __init__(self, master, callback_guardar, avatars, usuario_editar=None):
         super().__init__(master)
         self.callback_guardar = callback_guardar
         self.avatars = avatars
         self.avatar_seleccionado = avatars[0] if avatars else None
+        self.usuario_editar = usuario_editar
 
         self.title("Alta / Edición de usuario")
         self.geometry("400x500")
         self.resizable(False, False)
-        self.grab_set()  # bloquea ventana principal
+        self.grab_set()
+        self.transient(master)
 
         self.crear_widgets()
+        if usuario_editar:
+            self.cargar_datos_usuario()
 
     def crear_widgets(self):
-        # ---- Campos de texto ----
+        #texto
         ctk.CTkLabel(self, text="Nombre:").pack(pady=(10, 0))
         self.entry_nombre = ctk.CTkEntry(self, width=250)
         self.entry_nombre.pack(pady=5)
@@ -34,7 +38,7 @@ class AltaUsuarioModal(ctk.CTkToplevel):
         for g in ["Masculino", "Femenino", "Otro"]:
             ctk.CTkRadioButton(frame_genero, text=g, variable=self.var_genero, value=g).pack(side="left", padx=5)
 
-        # ---- Avatares con imagen ----
+        #Avatares
         ctk.CTkLabel(self, text="Selecciona un avatar:").pack(pady=(10, 0))
         frame_avatars = ctk.CTkFrame(self)
         frame_avatars.pack(pady=5)
@@ -46,13 +50,21 @@ class AltaUsuarioModal(ctk.CTkToplevel):
                 btn = ctk.CTkButton(frame_avatars, image=img, text="", width=70, height=70,
                                      command=lambda r=ruta: self.seleccionar_avatar(r))
                 btn.pack(side="left", padx=5)
-                btn.image = img  # mantener referencia
+                btn.image = img
                 self.botones_avatar.append(btn)
             except Exception:
-                continue  # ignora avatares faltantes
+                continue
 
-        # ---- Confirmar ----
         ctk.CTkButton(self, text="Confirmar", command=self.guardar).pack(pady=15)
+
+    def cargar_datos_usuario(self):
+        """Carga los datos del usuario a editar"""
+        if self.usuario_editar:
+            self.entry_nombre.insert(0, self.usuario_editar.nombre)
+            self.entry_edad.insert(0, str(self.usuario_editar.edad))
+            self.var_genero.set(self.usuario_editar.genero)
+            if self.usuario_editar.avatar:
+                self.seleccionar_avatar(self.usuario_editar.avatar)
 
     def seleccionar_avatar(self, ruta):
         self.avatar_seleccionado = ruta
@@ -77,5 +89,9 @@ class AltaUsuarioModal(ctk.CTkToplevel):
             return
 
         edad = int(edad_txt)
+        if not (0 <= edad <= 100):
+            messagebox.showerror("Error", "La edad debe estar entre 0 y 100.")
+            return
+
         self.callback_guardar(nombre, edad, genero, avatar)
         self.destroy()

@@ -39,7 +39,7 @@ class GestorUsuarios:
         else:
             raise IndexError("Índice fuera de rango.")
 
-    # ---- Persistencia CSV ----
+    #  CSV
     def guardar_csv(self, ruta: str = "usuarios.csv"):
         try:
             with open(ruta, "w", encoding="utf-8", newline="") as f:
@@ -69,7 +69,7 @@ class GestorUsuarios:
         except Exception as e:
             raise IOError(f"Error al cargar CSV: {e}")
 
-    # ---- Búsqueda y filtrado ----
+    # Buscar y filtrar
     def filtrar(self, texto_busqueda: str = "", genero: str = "Todos"):
         resultado = []
         texto_busqueda = texto_busqueda.lower().strip()
